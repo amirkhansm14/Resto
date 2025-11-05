@@ -1,0 +1,735 @@
+<!doctype html>
+<html lang="en">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Restaurant Orders</title>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="/_sdk/data_sdk.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <style>
+        body {
+            box-sizing: border-box;
+            height: 100%;
+            background-color: #f8fafc;
+        }
+        html {
+            height: 100%;
+        }
+        .food-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            height: 100%;
+        }
+        .food-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        .loading-spinner {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .order-summary {
+            position: sticky;
+            top: 20px;
+        }
+        .category-btn {
+            border: none;
+            transition: all 0.3s ease;
+        }
+        .category-btn.active {
+            background-color: #0d6efd !important;
+            color: white !important;
+        }
+        .quantity-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            font-weight: bold;
+            transition: all 0.2s ease;
+        }
+        .quantity-btn:hover {
+            transform: scale(1.1);
+        }
+        .card-img-top {
+            height: 200px;
+            object-fit: cover;
+        }
+    </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+ </head>
+ <body class="min-h-full">
+  <main class="min-vh-100"><!-- Header -->
+   <header class="bg-white shadow-sm">
+    <div class="container py-4">
+     <div class="text-center">
+      <h1 id="restaurant-title" class="display-4 fw-bold" style="color: #1e293b;">Bella Vista Restaurant</h1>
+      <p id="welcome-text" class="lead mt-2" style="color: #64748b;">Welcome! Browse our delicious menu and place your order</p>
+     </div>
+    </div>
+   </header>
+   <div class="container py-4">
+    <div class="row g-4"><!-- Menu Section -->
+     <div class="col-lg-8"><!-- Menu Categories -->
+      <div class="d-flex flex-wrap gap-3 mb-4"><button class="category-btn active btn btn-primary rounded-pill px-4 py-2" data-category="all">All Items</button> <button class="category-btn btn btn-outline-secondary rounded-pill px-4 py-2" data-category="appetizers">Appetizers</button> <button class="category-btn btn btn-outline-secondary rounded-pill px-4 py-2" data-category="mains">Main Courses</button> <button class="category-btn btn btn-outline-secondary rounded-pill px-4 py-2" data-category="desserts">Desserts</button> <button class="category-btn btn btn-outline-secondary rounded-pill px-4 py-2" data-category="beverages">Beverages</button>
+      </div><!-- Food Cards Grid -->
+      <div id="food-grid" class="row g-4"><!-- Food cards will be populated by JavaScript -->
+      </div>
+     </div><!-- Order Summary Section -->
+     <div class="col-lg-4">
+      <div class="order-summary card shadow-lg">
+       <div class="card-body">
+        <h2 class="card-title h3 mb-4" style="color: #1e293b;">Your Order</h2><!-- Customer Info -->
+        <div class="mb-4"><label for="customer-name" class="form-label fw-medium" style="color: #374151;">Your Name</label> <input type="text" id="customer-name" class="form-control" placeholder="Enter your name"> <label for="customer-phone" class="form-label fw-medium mt-3" style="color: #374151;">Phone Number</label> <input type="tel" id="customer-phone" class="form-control" placeholder="Enter your phone">
+        </div><!-- Order Items -->
+        <div id="order-items" class="mb-4">
+         <p class="text-muted text-center py-3">No items selected</p>
+        </div><!-- Total -->
+        <div class="border-top pt-3 mb-4">
+         <div class="d-flex justify-content-between align-items-center"><span class="h4 mb-0">Total:</span> <span class="h4 mb-0 fw-bold" style="color: #dc2626;">$<span id="order-total">0.00</span></span>
+         </div>
+        </div><!-- Place Order Button --> <button id="place-order" class="btn btn-success w-100 py-2 fw-medium" disabled> <span class="order-text">Place Order</span>
+         <div class="loading-spinner d-none mx-auto"></div></button>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div><!-- Success Message -->
+   <div id="success-message" class="position-fixed top-0 end-0 m-3 alert alert-success shadow-lg d-none" role="alert">
+    Order placed successfully!
+   </div>
+  </main>
+  <script>
+        // Menu data with SVG images
+        const menuItems = [
+            { 
+                id: 'app1', 
+                name: 'Bruschetta', 
+                price: 8.99, 
+                category: 'appetizers', 
+                description: 'Fresh tomatoes, basil, and mozzarella on toasted bread',
+                image: `<svg viewBox="0 0 200 150" class="w-full h-32 object-cover">
+                    <rect width="200" height="150" fill="#8B4513"/>
+                    <ellipse cx="100" cy="75" rx="80" ry="60" fill="#DEB887"/>
+                    <circle cx="70" cy="60" r="15" fill="#FF6347"/>
+                    <circle cx="130" cy="60" r="15" fill="#FF6347"/>
+                    <circle cx="100" cy="90" r="12" fill="#FF6347"/>
+                    <path d="M60 45 Q80 35 100 45 Q120 35 140 45" stroke="#228B22" stroke-width="3" fill="none"/>
+                    <circle cx="85" cy="70" r="8" fill="#FFFFFF" opacity="0.8"/>
+                    <circle cx="115" cy="80" r="8" fill="#FFFFFF" opacity="0.8"/>
+                </svg>`
+            },
+            { 
+                id: 'app2', 
+                name: 'Calamari Rings', 
+                price: 12.99, 
+                category: 'appetizers', 
+                description: 'Crispy fried squid rings with marinara sauce',
+                image: `<svg viewBox="0 0 200 150" class="w-full h-32 object-cover">
+                    <rect width="200" height="150" fill="#F5DEB3"/>
+                    <circle cx="60" cy="50" r="20" fill="#DDD" stroke="#B8860B" stroke-width="2"/>
+                    <circle cx="60" cy="50" r="12" fill="none" stroke="#B8860B" stroke-width="2"/>
+                    <circle cx="140" cy="60" r="18" fill="#DDD" stroke="#B8860B" stroke-width="2"/>
+                    <circle cx="140" cy="60" r="10" fill="none" stroke="#B8860B" stroke-width="2"/>
+                    <circle cx="100" cy="90" r="22" fill="#DDD" stroke="#B8860B" stroke-width="2"/>
+                    <circle cx="100" cy="90" r="14" fill="none" stroke="#B8860B" stroke-width="2"/>
+                    <circle cx="80" cy="120" r="16" fill="#DDD" stroke="#B8860B" stroke-width="2"/>
+                    <circle cx="80" cy="120" r="8" fill="none" stroke="#B8860B" stroke-width="2"/>
+                    <circle cx="150" cy="110" r="14" fill="#DDD" stroke="#B8860B" stroke-width="2"/>
+                    <circle cx="150" cy="110" r="6" fill="none" stroke="#B8860B" stroke-width="2"/>
+                </svg>`
+            },
+            { 
+                id: 'app3', 
+                name: 'Caesar Salad', 
+                price: 9.99, 
+                category: 'appetizers', 
+                description: 'Romaine lettuce, parmesan, croutons, caesar dressing',
+                image: `<svg viewBox="0 0 200 150" class="w-full h-32 object-cover">
+                    <rect width="200" height="150" fill="#FFFFFF"/>
+                    <ellipse cx="100" cy="75" rx="90" ry="65" fill="#90EE90"/>
+                    <path d="M30 60 Q50 40 70 60 Q90 40 110 60 Q130 40 150 60 Q170 40 190 60" stroke="#228B22" stroke-width="2" fill="none"/>
+                    <path d="M25 80 Q45 60 65 80 Q85 60 105 80 Q125 60 145 80 Q165 60 185 80" stroke="#228B22" stroke-width="2" fill="none"/>
+                    <path d="M35 100 Q55 80 75 100 Q95 80 115 100 Q135 80 155 100 Q175 80 195 100" stroke="#228B22" stroke-width="2" fill="none"/>
+                    <rect x="60" y="45" width="8" height="8" fill="#DEB887" transform="rotate(45 64 49)"/>
+                    <rect x="120" y="55" width="8" height="8" fill="#DEB887" transform="rotate(45 124 59)"/>
+                    <rect x="80" y="85" width="8" height="8" fill="#DEB887" transform="rotate(45 84 89)"/>
+                    <rect x="140" y="95" width="8" height="8" fill="#DEB887" transform="rotate(45 144 99)"/>
+                </svg>`
+            },
+            { 
+                id: 'main1', 
+                name: 'Margherita Pizza', 
+                price: 16.99, 
+                category: 'mains', 
+                description: 'Fresh mozzarella, tomato sauce, basil',
+                image: `<svg viewBox="0 0 200 150" class="w-full h-32 object-cover">
+                    <rect width="200" height="150" fill="#8B4513"/>
+                    <circle cx="100" cy="75" r="70" fill="#DEB887"/>
+                    <circle cx="100" cy="75" r="65" fill="#FF6347"/>
+                    <circle cx="70" cy="60" r="12" fill="#FFFFFF"/>
+                    <circle cx="130" cy="60" r="12" fill="#FFFFFF"/>
+                    <circle cx="85" cy="95" r="12" fill="#FFFFFF"/>
+                    <circle cx="115" cy="95" r="12" fill="#FFFFFF"/>
+                    <circle cx="100" cy="75" r="10" fill="#FFFFFF"/>
+                    <path d="M60 50 Q70 45 80 50" stroke="#228B22" stroke-width="2" fill="none"/>
+                    <path d="M120 50 Q130 45 140 50" stroke="#228B22" stroke-width="2" fill="none"/>
+                    <path d="M75 85 Q85 80 95 85" stroke="#228B22" stroke-width="2" fill="none"/>
+                    <path d="M105 85 Q115 80 125 85" stroke="#228B22" stroke-width="2" fill="none"/>
+                </svg>`
+            },
+            { 
+                id: 'main2', 
+                name: 'Grilled Salmon', 
+                price: 24.99, 
+                category: 'mains', 
+                description: 'Atlantic salmon with lemon herb butter',
+                image: `<svg viewBox="0 0 200 150" class="w-full h-32 object-cover">
+                    <rect width="200" height="150" fill="#FFFFFF"/>
+                    <ellipse cx="100" cy="75" rx="80" ry="30" fill="#FFA07A"/>
+                    <path d="M30 75 Q50 65 70 75 Q90 65 110 75 Q130 65 150 75 Q170 65 190 75" stroke="#FF6347" stroke-width="2" fill="none"/>
+                    <path d="M35 85 Q55 75 75 85 Q95 75 115 85 Q135 75 155 85 Q175 75 195 85" stroke="#FF6347" stroke-width="2" fill="none"/>
+                    <circle cx="60" cy="50" r="8" fill="#FFFF00"/>
+                    <path d="M52 50 Q60 45 68 50" stroke="#228B22" stroke-width="1" fill="none"/>
+                    <circle cx="140" cy="100" r="6" fill="#90EE90"/>
+                    <circle cx="150" cy="105" r="4" fill="#90EE90"/>
+                    <circle cx="130" cy="108" r="4" fill="#90EE90"/>
+                </svg>`
+            },
+            { 
+                id: 'main3', 
+                name: 'Beef Tenderloin', 
+                price: 28.99, 
+                category: 'mains', 
+                description: 'Prime cut with roasted vegetables',
+                image: `<svg viewBox="0 0 200 150" class="w-full h-32 object-cover">
+                    <rect width="200" height="150" fill="#FFFFFF"/>
+                    <ellipse cx="100" cy="75" rx="60" ry="25" fill="#8B4513"/>
+                    <ellipse cx="100" cy="75" rx="55" ry="20" fill="#A0522D"/>
+                    <circle cx="50" cy="100" r="12" fill="#FF8C00"/>
+                    <circle cx="150" cy="100" r="12" fill="#FF8C00"/>
+                    <circle cx="70" cy="110" r="8" fill="#32CD32"/>
+                    <circle cx="130" cy="110" r="8" fill="#32CD32"/>
+                    <circle cx="40" cy="120" r="6" fill="#8B4513"/>
+                    <circle cx="160" cy="120" r="6" fill="#8B4513"/>
+                    <path d="M80 65 L120 65" stroke="#654321" stroke-width="2"/>
+                    <path d="M85 75 L115 75" stroke="#654321" stroke-width="2"/>
+                    <path d="M80 85 L120 85" stroke="#654321" stroke-width="2"/>
+                </svg>`
+            },
+            { 
+                id: 'main4', 
+                name: 'Chicken Parmesan', 
+                price: 19.99, 
+                category: 'mains', 
+                description: 'Breaded chicken with marinara and mozzarella',
+                image: `<svg viewBox="0 0 200 150" class="w-full h-32 object-cover">
+                    <rect width="200" height="150" fill="#FFFFFF"/>
+                    <ellipse cx="100" cy="75" rx="70" ry="35" fill="#DEB887"/>
+                    <ellipse cx="100" cy="75" rx="65" ry="30" fill="#FF6347"/>
+                    <ellipse cx="100" cy="75" rx="60" ry="25" fill="#FFFFFF" opacity="0.8"/>
+                    <circle cx="80" cy="65" r="8" fill="#FFFF00"/>
+                    <circle cx="120" cy="65" r="8" fill="#FFFF00"/>
+                    <circle cx="90" cy="85" r="6" fill="#FFFF00"/>
+                    <circle cx="110" cy="85" r="6" fill="#FFFF00"/>
+                    <path d="M70 55 Q80 50 90 55" stroke="#228B22" stroke-width="2" fill="none"/>
+                    <path d="M110 55 Q120 50 130 55" stroke="#228B22" stroke-width="2" fill="none"/>
+                </svg>`
+            },
+            { 
+                id: 'dess1', 
+                name: 'Tiramisu', 
+                price: 7.99, 
+                category: 'desserts', 
+                description: 'Classic Italian dessert with coffee and mascarpone',
+                image: `<svg viewBox="0 0 200 150" class="w-full h-32 object-cover">
+                    <rect width="200" height="150" fill="#FFFFFF"/>
+                    <rect x="50" y="90" width="100" height="40" fill="#DEB887"/>
+                    <rect x="50" y="80" width="100" height="10" fill="#FFFFFF"/>
+                    <rect x="50" y="70" width="100" height="10" fill="#8B4513"/>
+                    <rect x="50" y="60" width="100" height="10" fill="#FFFFFF"/>
+                    <rect x="50" y="50" width="100" height="10" fill="#654321"/>
+                    <circle cx="70" cy="45" r="2" fill="#8B4513"/>
+                    <circle cx="80" cy="43" r="2" fill="#8B4513"/>
+                    <circle cx="90" cy="45" r="2" fill="#8B4513"/>
+                    <circle cx="100" cy="43" r="2" fill="#8B4513"/>
+                    <circle cx="110" cy="45" r="2" fill="#8B4513"/>
+                    <circle cx="120" cy="43" r="2" fill="#8B4513"/>
+                    <circle cx="130" cy="45" r="2" fill="#8B4513"/>
+                </svg>`
+            },
+            { 
+                id: 'dess2', 
+                name: 'Chocolate Lava Cake', 
+                price: 8.99, 
+                category: 'desserts', 
+                description: 'Warm chocolate cake with molten center',
+                image: `<svg viewBox="0 0 200 150" class="w-full h-32 object-cover">
+                    <rect width="200" height="150" fill="#FFFFFF"/>
+                    <ellipse cx="100" cy="100" rx="50" ry="30" fill="#654321"/>
+                    <ellipse cx="100" cy="90" rx="45" ry="25" fill="#8B4513"/>
+                    <ellipse cx="100" cy="80" rx="40" ry="20" fill="#A0522D"/>
+                    <ellipse cx="100" cy="70" rx="20" ry="15" fill="#FF6347"/>
+                    <path d="M80 70 Q90 60 100 70 Q110 60 120 70" stroke="#FF4500" stroke-width="3" fill="none"/>
+                    <circle cx="85" cy="65" r="3" fill="#FF4500"/>
+                    <circle cx="115" cy="65" r="3" fill="#FF4500"/>
+                    <circle cx="100" cy="60" r="2" fill="#FF4500"/>
+                    <path d="M90 55 Q100 45 110 55" stroke="#FF6347" stroke-width="2" fill="none"/>
+                </svg>`
+            },
+            { 
+                id: 'dess3', 
+                name: 'Gelato', 
+                price: 5.99, 
+                category: 'desserts', 
+                description: 'Vanilla, chocolate, or strawberry',
+                image: `<svg viewBox="0 0 200 150" class="w-full h-32 object-cover">
+                    <rect width="200" height="150" fill="#87CEEB"/>
+                    <polygon points="100,130 85,80 115,80" fill="#DEB887"/>
+                    <ellipse cx="100" cy="80" rx="20" ry="15" fill="#FFB6C1"/>
+                    <ellipse cx="100" cy="65" rx="18" ry="12" fill="#FFFFFF"/>
+                    <ellipse cx="100" cy="52" rx="16" ry="10" fill="#8B4513"/>
+                    <circle cx="95" cy="75" r="2" fill="#FF1493"/>
+                    <circle cx="105" cy="75" r="2" fill="#FF1493"/>
+                    <circle cx="100" cy="60" r="1" fill="#F0F8FF"/>
+                    <circle cx="98" cy="48" r="1" fill="#FFFF00"/>
+                    <circle cx="102" cy="48" r="1" fill="#FFFF00"/>
+                </svg>`
+            },
+            { 
+                id: 'bev1', 
+                name: 'Italian Soda', 
+                price: 3.99, 
+                category: 'beverages', 
+                description: 'Sparkling water with fruit syrup',
+                image: `<svg viewBox="0 0 200 150" class="w-full h-32 object-cover">
+                    <rect width="200" height="150" fill="#87CEEB"/>
+                    <rect x="80" y="40" width="40" height="80" rx="5" fill="#E6E6FA" stroke="#4169E1" stroke-width="2"/>
+                    <rect x="82" y="45" width="36" height="60" fill="#FF69B4" opacity="0.7"/>
+                    <circle cx="85" cy="50" r="2" fill="#FFFFFF" opacity="0.8"/>
+                    <circle cx="95" cy="55" r="2" fill="#FFFFFF" opacity="0.8"/>
+                    <circle cx="105" cy="52" r="2" fill="#FFFFFF" opacity="0.8"/>
+                    <circle cx="115" cy="58" r="2" fill="#FFFFFF" opacity="0.8"/>
+                    <circle cx="90" cy="65" r="2" fill="#FFFFFF" opacity="0.8"/>
+                    <circle cx="110" cy="68" r="2" fill="#FFFFFF" opacity="0.8"/>
+                    <rect x="95" y="35" width="10" height="10" fill="#FFD700"/>
+                    <path d="M85 30 Q100 20 115 30" stroke="#32CD32" stroke-width="3" fill="none"/>
+                </svg>`
+            },
+            { 
+                id: 'bev2', 
+                name: 'Espresso', 
+                price: 2.99, 
+                category: 'beverages', 
+                description: 'Rich Italian coffee',
+                image: `<svg viewBox="0 0 200 150" class="w-full h-32 object-cover">
+                    <rect width="200" height="150" fill="#F5F5DC"/>
+                    <ellipse cx="100" cy="110" rx="25" ry="8" fill="#696969"/>
+                    <ellipse cx="100" cy="100" rx="30" ry="25" fill="#FFFFFF"/>
+                    <ellipse cx="100" cy="95" rx="28" ry="20" fill="#654321"/>
+                    <ellipse cx="100" cy="90" rx="25" ry="15" fill="#8B4513"/>
+                    <rect x="125" y="95" width="15" height="5" rx="2" fill="#FFFFFF"/>
+                    <path d="M90 75 Q95 65 100 75 Q105 65 110 75" stroke="#DEB887" stroke-width="2" fill="none"/>
+                    <path d="M85 70 Q90 60 95 70" stroke="#DEB887" stroke-width="1" fill="none"/>
+                    <path d="M105 70 Q110 60 115 70" stroke="#DEB887" stroke-width="1" fill="none"/>
+                </svg>`
+            },
+            { 
+                id: 'bev3', 
+                name: 'House Wine', 
+                price: 6.99, 
+                category: 'beverages', 
+                description: 'Red or white wine selection',
+                image: `<svg viewBox="0 0 200 150" class="w-full h-32 object-cover">
+                    <rect width="200" height="150" fill="#F5F5DC"/>
+                    <path d="M90 130 L90 80 Q90 70 100 70 Q110 70 110 80 L110 130 Q110 135 100 135 Q90 135 90 130" fill="#E6E6FA" stroke="#4B0082" stroke-width="2"/>
+                    <ellipse cx="100" cy="70" rx="20" ry="15" fill="#E6E6FA" stroke="#4B0082" stroke-width="2"/>
+                    <ellipse cx="100" cy="85" rx="18" ry="25" fill="#8B0000"/>
+                    <path d="M82 70 Q100 60 118 70" stroke="#32CD32" stroke-width="2" fill="none"/>
+                    <circle cx="88" cy="68" r="2" fill="#90EE90"/>
+                    <circle cx="112" cy="68" r="2" fill="#90EE90"/>
+                    <ellipse cx="100" cy="80" rx="15" ry="3" fill="#FF69B4" opacity="0.3"/>
+                </svg>`
+            }
+        ];
+
+        // Configuration
+        const defaultConfig = {
+            restaurant_name: "Bella Vista Restaurant",
+            welcome_message: "Welcome! Browse our delicious menu and place your order",
+            order_button_text: "Order Now",
+            background_color: "#f8fafc",
+            surface_color: "#ffffff",
+            text_color: "#1e293b",
+            primary_action_color: "#dc2626",
+            secondary_action_color: "#3b82f6",
+            font_family: "Inter",
+            font_size: 16
+        };
+
+        let selectedItems = {};
+        let orders = [];
+        let currentFilter = 'all';
+        let isLoading = false;
+
+        // Data SDK handler
+        const dataHandler = {
+            onDataChanged(data) {
+                orders = data;
+            }
+        };
+
+        // Initialize SDKs
+        async function initializeApp() {
+            // Initialize Data SDK
+            if (window.dataSdk) {
+                const initResult = await window.dataSdk.init(dataHandler);
+                if (!initResult.isOk) {
+                    console.error("Failed to initialize data SDK");
+                }
+            }
+
+            // Initialize Element SDK
+            if (window.elementSdk) {
+                await window.elementSdk.init({
+                    defaultConfig,
+                    onConfigChange: async (config) => {
+                        // Update restaurant name and welcome message
+                        const titleEl = document.getElementById('restaurant-title');
+                        const welcomeEl = document.getElementById('welcome-text');
+                        
+                        if (titleEl) titleEl.textContent = config.restaurant_name || defaultConfig.restaurant_name;
+                        if (welcomeEl) welcomeEl.textContent = config.welcome_message || defaultConfig.welcome_message;
+                        
+                        // Update colors
+                        const bgColor = config.background_color || defaultConfig.background_color;
+                        const surfaceColor = config.surface_color || defaultConfig.surface_color;
+                        const textColor = config.text_color || defaultConfig.text_color;
+                        const primaryColor = config.primary_action_color || defaultConfig.primary_action_color;
+                        const secondaryColor = config.secondary_action_color || defaultConfig.secondary_action_color;
+                        
+                        document.querySelector('main').style.backgroundColor = bgColor;
+                        document.querySelector('header').style.backgroundColor = surfaceColor;
+                        document.getElementById('restaurant-title').style.color = textColor;
+                        
+                        // Update font
+                        const customFont = config.font_family || defaultConfig.font_family;
+                        const fontSize = config.font_size || defaultConfig.font_size;
+                        document.body.style.fontFamily = `${customFont}, -apple-system, BlinkMacSystemFont, sans-serif`;
+                        document.body.style.fontSize = `${fontSize}px`;
+                        
+                        // Update order button text
+                        const placeOrderBtn = document.getElementById('place-order');
+                        if (placeOrderBtn) {
+                            const orderText = placeOrderBtn.querySelector('.order-text');
+                            if (orderText) {
+                                orderText.textContent = config.order_button_text || defaultConfig.order_button_text;
+                            }
+                        }
+                    },
+                    mapToCapabilities: (config) => ({
+                        recolorables: [
+                            {
+                                get: () => config.background_color || defaultConfig.background_color,
+                                set: (value) => {
+                                    if (window.elementSdk) {
+                                        window.elementSdk.setConfig({ background_color: value });
+                                    }
+                                }
+                            },
+                            {
+                                get: () => config.surface_color || defaultConfig.surface_color,
+                                set: (value) => {
+                                    if (window.elementSdk) {
+                                        window.elementSdk.setConfig({ surface_color: value });
+                                    }
+                                }
+                            },
+                            {
+                                get: () => config.text_color || defaultConfig.text_color,
+                                set: (value) => {
+                                    if (window.elementSdk) {
+                                        window.elementSdk.setConfig({ text_color: value });
+                                    }
+                                }
+                            },
+                            {
+                                get: () => config.primary_action_color || defaultConfig.primary_action_color,
+                                set: (value) => {
+                                    if (window.elementSdk) {
+                                        window.elementSdk.setConfig({ primary_action_color: value });
+                                    }
+                                }
+                            },
+                            {
+                                get: () => config.secondary_action_color || defaultConfig.secondary_action_color,
+                                set: (value) => {
+                                    if (window.elementSdk) {
+                                        window.elementSdk.setConfig({ secondary_action_color: value });
+                                    }
+                                }
+                            }
+                        ],
+                        borderables: [],
+                        fontEditable: {
+                            get: () => config.font_family || defaultConfig.font_family,
+                            set: (value) => {
+                                if (window.elementSdk) {
+                                    window.elementSdk.setConfig({ font_family: value });
+                                }
+                            }
+                        },
+                        fontSizeable: {
+                            get: () => config.font_size || defaultConfig.font_size,
+                            set: (value) => {
+                                if (window.elementSdk) {
+                                    window.elementSdk.setConfig({ font_size: value });
+                                }
+                            }
+                        }
+                    }),
+                    mapToEditPanelValues: (config) => new Map([
+                        ["restaurant_name", config.restaurant_name || defaultConfig.restaurant_name],
+                        ["welcome_message", config.welcome_message || defaultConfig.welcome_message],
+                        ["order_button_text", config.order_button_text || defaultConfig.order_button_text]
+                    ])
+                });
+            }
+
+            renderFoodItems();
+            setupEventListeners();
+        }
+
+        function renderFoodItems() {
+            const grid = document.getElementById('food-grid');
+            const filteredItems = currentFilter === 'all' ? menuItems : menuItems.filter(item => item.category === currentFilter);
+            
+            grid.innerHTML = filteredItems.map(item => {
+                const quantity = selectedItems[item.id] || 0;
+                
+                return `
+                <div class="col-md-6 col-xl-4">
+                    <div class="card food-card h-100 shadow-sm">
+                        <div class="card-img-top overflow-hidden" style="height: 200px;">
+                            ${item.image}
+                        </div>
+                        <div class="card-body d-flex flex-column">
+                            <h5 class="card-title fw-bold" style="color: #1e293b;">${item.name}</h5>
+                            <p class="card-text text-muted small mb-3">${item.description}</p>
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="h4 fw-bold mb-0" style="color: #dc2626;">$${item.price.toFixed(2)}</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mt-auto">
+                                <div class="d-flex align-items-center gap-3">
+                                    <button class="quantity-btn btn btn-danger d-flex align-items-center justify-content-center ${quantity === 0 ? 'opacity-50' : ''}" 
+                                            data-item-id="${item.id}" 
+                                            data-action="decrease">-</button>
+                                    <span class="fw-bold fs-5 text-center" style="min-width: 30px;">${quantity}</span>
+                                    <button class="quantity-btn btn btn-danger d-flex align-items-center justify-content-center" 
+                                            data-item-id="${item.id}" 
+                                            data-action="increase">+</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+        }
+
+        function setupEventListeners() {
+            // Category filters
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.category-btn').forEach(b => {
+                        b.classList.remove('active', 'btn-primary');
+                        b.classList.add('btn-outline-secondary');
+                    });
+                    
+                    e.target.classList.add('active', 'btn-primary');
+                    e.target.classList.remove('btn-outline-secondary');
+                    
+                    currentFilter = e.target.dataset.category;
+                    renderFoodItems();
+                });
+            });
+
+            // Quantity buttons
+            document.addEventListener('click', (e) => {
+                if (e.target.classList.contains('quantity-btn')) {
+                    const itemId = e.target.dataset.itemId;
+                    const action = e.target.dataset.action;
+                    
+                    if (action === 'increase') {
+                        selectedItems[itemId] = (selectedItems[itemId] || 0) + 1;
+                    } else if (action === 'decrease' && selectedItems[itemId] > 0) {
+                        selectedItems[itemId] = selectedItems[itemId] - 1;
+                        if (selectedItems[itemId] === 0) {
+                            delete selectedItems[itemId];
+                        }
+                    }
+                    
+                    renderFoodItems();
+                    updateOrderSummary();
+                }
+            });
+
+            // Place order
+            document.getElementById('place-order').addEventListener('click', placeOrder);
+
+            // Customer info validation
+            document.getElementById('customer-name').addEventListener('input', validateForm);
+            document.getElementById('customer-phone').addEventListener('input', validateForm);
+        }
+
+        function updateOrderSummary() {
+            const orderItems = document.getElementById('order-items');
+            const orderTotal = document.getElementById('order-total');
+            const placeOrderBtn = document.getElementById('place-order');
+            
+            const items = Object.keys(selectedItems).map(itemId => {
+                const item = menuItems.find(i => i.id === itemId);
+                return { ...item, quantity: selectedItems[itemId] };
+            });
+            
+            if (items.length === 0) {
+                orderItems.innerHTML = '<p class="text-muted text-center py-3">No items selected</p>';
+                orderTotal.textContent = '0.00';
+                placeOrderBtn.disabled = true;
+                placeOrderBtn.classList.add('btn-secondary');
+                placeOrderBtn.classList.remove('btn-success');
+                return;
+            }
+            
+            const total = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            
+            orderItems.innerHTML = items.map(item => `
+                <div class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                    <div class="flex-grow-1">
+                        <h6 class="fw-medium mb-1 small">${item.name}</h6>
+                        <p class="text-muted mb-0" style="font-size: 0.75rem;">${item.quantity} × $${item.price.toFixed(2)}</p>
+                    </div>
+                    <span class="fw-bold small">$${(item.price * item.quantity).toFixed(2)}</span>
+                </div>
+            `).join('');
+            
+            orderTotal.textContent = total.toFixed(2);
+            validateForm();
+        }
+
+        function validateForm() {
+            const customerName = document.getElementById('customer-name').value.trim();
+            const customerPhone = document.getElementById('customer-phone').value.trim();
+            const placeOrderBtn = document.getElementById('place-order');
+            const hasItems = Object.keys(selectedItems).length > 0;
+            
+            if (customerName && customerPhone && hasItems) {
+                placeOrderBtn.disabled = false;
+                placeOrderBtn.classList.add('btn-success');
+                placeOrderBtn.classList.remove('btn-secondary');
+            } else {
+                placeOrderBtn.disabled = true;
+                placeOrderBtn.classList.add('btn-secondary');
+                placeOrderBtn.classList.remove('btn-success');
+            }
+        }
+
+        async function placeOrder() {
+            if (isLoading) return;
+            
+            const customerName = document.getElementById('customer-name').value.trim();
+            const customerPhone = document.getElementById('customer-phone').value.trim();
+            
+            if (!customerName || !customerPhone || Object.keys(selectedItems).length === 0) {
+                showMessage("Please fill in all fields and select items", "error");
+                return;
+            }
+            
+            if (orders.length >= 999) {
+                showMessage("Maximum limit of 999 orders reached. Please contact the restaurant directly.", "error");
+                return;
+            }
+            
+            isLoading = true;
+            const orderBtn = document.getElementById('place-order');
+            const orderText = orderBtn.querySelector('.order-text');
+            const spinner = orderBtn.querySelector('.loading-spinner');
+            
+            orderBtn.disabled = true;
+            orderText.style.display = 'none';
+            spinner.classList.remove('d-none');
+            
+            try {
+                const totalAmount = Object.keys(selectedItems).reduce((sum, itemId) => {
+                    const item = menuItems.find(i => i.id === itemId);
+                    return sum + (item.price * selectedItems[itemId]);
+                }, 0);
+                
+                // Save each item as a separate order record
+                for (const itemId of Object.keys(selectedItems)) {
+                    const item = menuItems.find(i => i.id === itemId);
+                    const orderData = {
+                        id: `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                        name: item.name,
+                        price: item.price,
+                        quantity: selectedItems[itemId],
+                        category: item.category,
+                        customerName: customerName,
+                        customerPhone: customerPhone,
+                        orderTime: new Date().toISOString(),
+                        totalAmount: totalAmount
+                    };
+                    
+                    if (window.dataSdk) {
+                        const result = await window.dataSdk.create(orderData);
+                        if (!result.isOk) {
+                            throw new Error('Failed to save order');
+                        }
+                    }
+                }
+                
+                // Clear form and selections
+                selectedItems = {};
+                document.getElementById('customer-name').value = '';
+                document.getElementById('customer-phone').value = '';
+                renderFoodItems();
+                updateOrderSummary();
+                
+                showMessage(`Order placed successfully! Thank you ${customerName}. We'll contact you at ${customerPhone} when ready.`, "success");
+                
+            } catch (error) {
+                showMessage("Failed to place order. Please try again.", "error");
+            } finally {
+                isLoading = false;
+                orderBtn.disabled = false;
+                orderText.style.display = 'inline';
+                spinner.classList.add('d-none');
+            }
+        }
+
+        function showMessage(message, type) {
+            const successMsg = document.getElementById('success-message');
+            successMsg.textContent = message;
+            successMsg.className = `position-fixed top-0 end-0 m-3 alert shadow-lg ${type === 'success' ? 'alert-success' : 'alert-danger'}`;
+            successMsg.classList.remove('d-none');
+            
+            setTimeout(() => {
+                successMsg.classList.add('d-none');
+            }, 5000);
+        }
+
+        // Initialize the app
+        initializeApp();
+    </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'998d172df490c91f',t:'MTc2MjE4NTY4OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
