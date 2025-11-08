@@ -30,6 +30,7 @@ urlpatterns = [
     path('staffdelete/<int:id>', views.staffdelete, name='staffdelete'),
     path('',views.log,name='login'),
     path('cashierhome',views.cashier,name='cashierhome'),
+    path('addtables',views.addtables,name='addtable'),
     
 ]
 if settings.DEBUG:

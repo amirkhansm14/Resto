@@ -10,7 +10,8 @@ def index(request):
     return render(request,'index.html')
 
 def tables(request):
-    return render(request,'Tables.html')
+    a=Tables.objects.all()
+    return render(request,'Tables.html',{'a':a})
 
 def menu(request):
     foods =Food.objects.all()
@@ -74,3 +75,14 @@ def log(request):
            return render(request,'login.html',{'error':'user not found'})
     else:
         return render(request,'Login.html')
+def addtables(request):
+    if request.method=='POST':
+        tableno=request.POST.get('table_number')
+        capacity=request.POST.get('capacity')
+        location=request.POST.get('location')
+        data=Tables.objects.create(number=tableno,capacity=capacity,location=location)
+        data.save()
+        return redirect('addtable')
+    else:
+        a=Tables.objects.all()
+        return render(request,'Addtables.html',{'a':a})

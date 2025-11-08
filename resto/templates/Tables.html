@@ -78,8 +78,8 @@
     <div class="container">
       <div class="row align-items-center">
         <div class="col-md-8">
-          <h1 class="display-6 fw-bold text-primary mb-0">Bella Vista Restaurant</h1>
-          <p class="text-muted mb-0">Main Dining Hall</p>
+          <h1 class="display-6 fw-bold text-danger mb-0">Resto</h1>
+          <p class="text-muted mb-0">Management made ease</p>
         </div>
         <div class="col-md-4 text-md-end mt-3 mt-md-0">
           <button class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#reservationModal">
@@ -98,17 +98,13 @@
           <div class="card-body">
             <div class="floor-plan">
               <div class="section-box entrance">🚪 Entrance</div>
-              <div class="section-box bar">🍸 Bar</div>
+              
               <div class="section-box kitchen">👨‍🍳 Kitchen</div>
 
               <!-- Sample Tables -->
-               <a href="{% url 'menu' %}"><div class="table-item table-available">T1<br><small>2 Seats</small></div></a>
-              <div class="table-item table-available">T1<br><small>2 Seats</small></div>
-              <div class="table-item table-occupied">T2<br><small>4 Seats</small></div>
-              <div class="table-item table-reserved">T3<br><small>3 Seats</small></div>
-              <div class="table-item table-cleaning">T4<br><small>6 Seats</small></div>
-              <div class="table-item table-available">T5<br><small>2 Seats</small></div>
-              <div class="table-item table-occupied">T6<br><small>8 Seats</small></div>
+               {% for i in a %}
+               <a href="{% url 'menu' %}"><div class="table-item table-available">{{i.number}}<br><small>{{i.capacity}}Seats</small></div></a>
+                {% endfor %}
             </div>
           </div>
         </div>
