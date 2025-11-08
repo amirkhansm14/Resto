@@ -135,10 +135,10 @@
       <tbody>
         {% for i in a %}
         <tr>
-          <td>{{ i.staffname }}</td>
+          <td>{{ i.user_id.first_name }}</td>
           <td>{{ i.category }}</td>
-          <td>{{ i.email }}</td>
-          <td>{{i.password}}</td> <!-- hide password -->
+          <td>{{ i.user_id.username }}</td>
+          <td>{{ i.password }}</td>
           <td class="text-center">
             <a href="{% url 'staffdelete' i.id %}" 
                class="btn btn-danger btn-sm px-3"

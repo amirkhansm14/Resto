@@ -78,7 +78,7 @@
     <h3>Login</h3>
 
     <!-- Django form -->
-    <form method="POST">
+    <form method="POST" action="{% url 'login' %}">
       {% csrf_token %}
       
       <!-- Username -->
