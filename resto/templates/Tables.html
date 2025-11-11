@@ -103,7 +103,7 @@
 
               <!-- Sample Tables -->
                {% for i in a %}
-               <a href="{% url 'menu' %}"><div class="table-item table-available">{{i.number}}<br><small>{{i.capacity}}Seats</small></div></a>
+               <a href="{% url 'menu' i.id %}"><div class="table-item table-available">{{i.number}}<br><small>{{i.capacity}}Seats</small></div></a>
                 {% endfor %}
             </div>
           </div>

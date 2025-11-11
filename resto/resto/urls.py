@@ -23,14 +23,16 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('index',views.index,name='index'),
     path('tables',views.tables,name='tables'),
-    path('menu',views.menu,name='menu'),
+    path('menu/<int:id>',views.menu,name='menu'),
     path('adminhome',views.adminhome,name='adminhome'),
     path('addfood',views.addfood,name='addfood'),
     path('addstaff',views.addstaff,name='addstaff'),
     path('staffdelete/<int:id>', views.staffdelete, name='staffdelete'),
+    path('fddelete/<int:id>', views.fooddelete, name='fddelete'),
     path('',views.log,name='login'),
     path('cashierhome',views.cashier,name='cashierhome'),
     path('addtables',views.addtables,name='addtable'),
+    path('logout',views.Logout,name='logout'),
     
 ]
 if settings.DEBUG:

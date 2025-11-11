@@ -13,9 +13,10 @@ def tables(request):
     a=Tables.objects.all()
     return render(request,'Tables.html',{'a':a})
 
-def menu(request):
+def menu(request,id):
+    a=id
     foods =Food.objects.all()
-    return render(request, 'menu.html', {'foods': foods})
+    return render(request, 'menu.html', {'foods': foods,'a':a})
 
 def cashier(request):
     return render(request,'Cashierhome.html')
@@ -31,9 +32,10 @@ def addfood(request):
         image=request.FILES['food_image']
         data=Food.objects.create(foodname=fdname,category=category,price=price,description=description,image=image)
         data.save()
-        return HttpResponse("succes")
+        return redirect('addfood')
     else:    
-        return render(request,'Addfood.html')
+        a=Food.objects.all()
+        return render(request,'Addfood.html',{'a':a})
 
 def addstaff(request):
     if request.method=='POST':
@@ -55,6 +57,11 @@ def staffdelete(request,id):
     book = get_object_or_404(Staff, id=id)
     book.delete()
     return redirect('addstaff') 
+
+def fooddelete(request,id):
+    book = get_object_or_404(Food, id=id)
+    book.delete()
+    return redirect('addfood') 
 
 def log(request):
     if request.method=='POST':
@@ -86,3 +93,13 @@ def addtables(request):
     else:
         a=Tables.objects.all()
         return render(request,'Addtables.html',{'a':a})
+    
+def Logout(request):
+    auth.logout(request)
+    return redirect('login')
+
+def order(request):
+    if request.method=='POST':
+        tableno=request.POST.get('')
+        capacity=request.POST.get('foodname')
+        location=request.POST.get('location')

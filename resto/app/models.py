@@ -23,6 +23,14 @@ class Admin(models.Model):
    
 
 class Tables(models.Model):
-    number=models.IntegerField()
+    number=models.IntegerField(unique=True)
     capacity=models.IntegerField()
     location=models.CharField(max_length=100)
+
+class Orders(models.Model):
+    table = models.ForeignKey(Tables, to_field='number', on_delete=models.CASCADE)
+    foodname= models.CharField()
+    total_amount = models.DecimalField(max_digits=8, decimal_places=2, default=0.00)
+
+
+
