@@ -61,15 +61,49 @@
             <h5 class="card-title"  >{{ item.foodname }}</h5>
             <p class="card-text text-muted" >{{ item.description }}</p>
             <p><strong>₹{{ item.price }}</strong></p>
-            <button class="btn btn-custom">Add to Cart</button>
+            
+            <form action="{% url 'order' %}" method="post">
+              {% csrf_token %}
+              <input type="number" value="{{item.id}}" name="fdid" hidden>
+              <input type="number" value="{{a}}" name="tbid" hidden>
+              <input type="number" value="{{item.price}}" name="price" hidden>
+              <button class="btn btn-custom">Add to Cart</button>
+            </form>
           </div>
         </div>
       </div>
       {% endfor %}
 
-      {% if data|length == 0 %}
-        <p class="text-center text-muted">No food items available yet.</p>
-      {% endif %}
+      
+      <table>
+        
+        <tr>
+          <th>item name</th>
+          <th>quantity</th>
+          <th>price</th>
+          <th>action</th>
+        </tr>
+        {% for i in orders %}
+  <tr>
+    <td>{{ i.Foodid__foodname }}</td>
+    <td>{{ i.quantity }}</td>
+    <td>₹{{ i.total_price }}</td>
+    <td >
+            <a href="#" 
+               class="btn btn-danger btn-sm px-3">
+              Delete
+            </a>
+          </td>
+  </tr>
+  {% endfor %}
+        {% if total > 0 %}
+  <tr>
+    <th>Total</th>
+    <th></th>
+    <td colspan="2">₹{{ total }}</td>
+  </tr>
+{% endif %}
+
 
     </div>
   </div>

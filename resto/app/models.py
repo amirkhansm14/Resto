@@ -29,8 +29,16 @@ class Tables(models.Model):
 
 class Orders(models.Model):
     table = models.ForeignKey(Tables, to_field='number', on_delete=models.CASCADE)
-    foodname= models.CharField()
+    Foodid= models.ForeignKey(Food, on_delete=models.CASCADE,null=True)
+    waiterid=models.ForeignKey(User,on_delete=models.CASCADE,null=True)
     total_amount = models.DecimalField(max_digits=8, decimal_places=2, default=0.00)
+    status = models.CharField(max_length=20, default='pending') 
 
+class Sales(models.Model):
+    customer_name = models.CharField(max_length=100)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    date = models.DateTimeField(auto_now_add=True)
 
+    def __str__(self):
+        return f"{self.customer_name} - {self.amount}"
 
