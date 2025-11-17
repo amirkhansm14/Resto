@@ -62,7 +62,7 @@
             <p class="card-text text-muted" >{{ item.description }}</p>
             <p><strong>₹{{ item.price }}</strong></p>
             
-            <form action="{% url 'order' %}" method="post">
+            <form action="{% url 'order' a %}" method="post">
               {% csrf_token %}
               <input type="number" value="{{item.id}}" name="fdid" hidden>
               <input type="number" value="{{a}}" name="tbid" hidden>
@@ -88,12 +88,13 @@
     <td>{{ i.Foodid__foodname }}</td>
     <td>{{ i.quantity }}</td>
     <td>₹{{ i.total_price }}</td>
-    <td >
-            <a href="#" 
-               class="btn btn-danger btn-sm px-3">
-              Delete
-            </a>
-          </td>
+    <td>
+  <a href="{% url 'orderdelete' a i.Foodid__id %}" 
+     class="btn btn-custom btn-sm px-3"
+     style="background-color:#e74c3c; color:white; border-radius:6px;">
+     -
+  </a>
+</td>
   </tr>
   {% endfor %}
         {% if total > 0 %}
@@ -107,6 +108,15 @@
 
     </div>
   </div>
+  {% if total > 0 %}
+<div class="text-center mt-4">
+  <a href="{% url 'confirm_order' a %}" 
+     class="btn btn-success px-4 py-2"
+     style="font-size: 18px; border-radius: 8px;">
+    ✔ Confirm Order
+  </a>
+</div>
+{% endif %}
 
   <!-- ✅ Bootstrap JS -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

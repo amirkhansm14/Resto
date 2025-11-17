@@ -28,15 +28,11 @@
 
   <h4>Total Amount: ₹{{ total }}</h4>
 
-  <form method="POST" class="mt-4">
-    {% csrf_token %}
-    <label class="form-label">Customer Name</label>
-    <input type="text" name="customer_name" class="form-control" required>
-
-    <button type="submit" class="btn btn-primary mt-3">
-      Confirm & Generate Bill
-    </button>
-  </form>
+   <a href="{% url 'print_bill' table.id %}" 
+   onclick="setTimeout(() => { window.location.href='{% url 'cashier_dashboard' %}'; }, 1500);"
+   class="btn btn-primary">
+   Print Bill
+</a>
 
 </body>
 </html>

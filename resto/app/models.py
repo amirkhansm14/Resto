@@ -26,7 +26,9 @@ class Tables(models.Model):
     number=models.IntegerField(unique=True)
     capacity=models.IntegerField()
     location=models.CharField(max_length=100)
+    status = models.CharField(max_length=20, default="available")  
 
+    
 class Orders(models.Model):
     table = models.ForeignKey(Tables, to_field='number', on_delete=models.CASCADE)
     Foodid= models.ForeignKey(Food, on_delete=models.CASCADE,null=True)
@@ -37,8 +39,6 @@ class Orders(models.Model):
 class Sales(models.Model):
     customer_name = models.CharField(max_length=100)
     amount = models.DecimalField(max_digits=10, decimal_places=2)
+    waiterid = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
     date = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"{self.customer_name} - {self.amount}"
 

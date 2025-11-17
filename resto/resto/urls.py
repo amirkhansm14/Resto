@@ -33,12 +33,16 @@ urlpatterns = [
     path('cashierhome',views.cashier,name='cashierhome'),
     path('addtables',views.addtables,name='addtable'),
     path('logout',views.Logout,name='logout'),
-    path('order',views.order,name='order'),
+    path('order/<int:id>',views.order,name='order'),
     path('dltord/<int:id>', views.orderdelete, name='dltord'),
     path('kitchen/', views.kitchen_dashboard, name='kitchen_dashboard'),
     path('mark_ready/<int:table_number>/<int:food_id>/', views.mark_ready, name='mark_ready'),
     path('cashier/', views.cashier_dashboard, name='cashier_dashboard'),
     path('bill/<int:table_number>/', views.bill_table, name='bill_table'),
+    path("print-bill/<int:table_number>/", views.print_bill_pdf, name="print_bill"),
+    path('order/delete/<int:table_id>/<int:food_id>/', views.orderdelete, name='orderdelete'),
+    path('confirm/<int:id>/', views.confirm_order, name='confirm_order'),
+    
     
 ]
 if settings.DEBUG:

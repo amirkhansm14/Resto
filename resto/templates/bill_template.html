@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Bill</title>
+
+<style>
+  body {
+    font-family: "Courier New", monospace;
+    padding: 20px;
+    background: #fff;
+    color: #000;
+  }
+
+  .bill-box {
+    width: 300px;
+    margin: auto;
+    padding: 15px;
+    border: 1px dashed #333;
+  }
+
+  h2 {
+    text-align: center;
+    margin: 0;
+    padding: 8px 0;
+    font-size: 20px;
+    font-weight: bold;
+  }
+
+  .center {
+    text-align: center;
+  }
+
+  .top-info {
+    text-align: center;
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+
+  table {
+    width: 100%;
+    font-size: 14px;
+    border-collapse: collapse;
+  }
+
+  th, td {
+    padding: 4px 0;
+  }
+
+  .line {
+    border-top: 1px dashed #333;
+    margin: 10px 0;
+  }
+
+  .totals td {
+    font-weight: bold;
+  }
+
+</style>
+</head>
+
+<body>
+
+<div class="bill-box">
+
+  <h2>RECEIPT</h2>
+
+  <div class="top-info">
+    Table No: <b>{{ table_no }}</b><br>
+    Date: {{ now|date:"d-m-Y h:i A" }}
+  </div>
+
+  <div class="line"></div>
+
+  <table>
+    <tr>
+      <th>Item</th>
+      <th>Qty</th>
+      <th align="right">Amt</th>
+    </tr>
+
+    {% for item in orders %}
+    <tr>
+      <td>{{ item.Foodid__foodname }}</td>
+      <td>{{ item.quantity }}</td>
+      <td align="right">₹{{ item.Foodid__price|floatformat:2 }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <div class="line"></div>
+
+  <table class="totals">
+    <tr>
+      <td>Subtotal:</td>
+      <td align="right">₹{{ subtotal|floatformat:2 }}</td>
+    </tr>
+    <tr>
+      <td>GST (5%):</td>
+      <td align="right">₹{{ gst|floatformat:2 }}</td>
+    </tr>
+    <tr>
+      <td>Total:</td>
+      <td align="right">₹{{ total|floatformat:2 }}</td>
+    </tr>
+  </table>
+
+  <div class="line"></div>
+
+  <div class="center">Thank you! Visit Again</div>
+
+</div>
+
+</body>
+</html>

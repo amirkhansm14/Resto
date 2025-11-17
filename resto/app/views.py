@@ -3,9 +3,14 @@ from django.http import HttpResponse
 from django.contrib.auth import authenticate,login,logout
 from django.contrib.auth.models import auth
 from .models import *
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from reportlab.lib.units import inch
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.db.models import Sum,Count,Min
+from django.template.loader import get_template
+from xhtml2pdf import pisa
 # Create your views here.
 def index(request):
     return render(request,'index.html')
@@ -14,12 +19,14 @@ def tables(request):
     a=Tables.objects.all()
     return render(request,'Tables.html',{'a':a})
 
-def menu(request,id):
-    a=id
-    foods =Food.objects.all()
-    order=(
+def menu(request, id):
+    a = id
+    foods = Food.objects.all()
+
+    # FIXED: Added Foodid__id and Foodid__price
+    order = (
         Orders.objects.filter(table__number=a)
-        .values('Foodid__foodname')
+        .values('Foodid__foodname', 'Foodid__id', 'Foodid__price')
         .annotate(
             first_order_id=Min('id'),
             quantity=Count('id'),
@@ -40,10 +47,16 @@ def menu(request,id):
         }
     )
 
-def orderdelete(request,id):
-    Orders.objects.filter(id=id).delete()
-   
-    return redirect('order')
+
+def orderdelete(request, table_id, food_id):
+    a=table_id
+    # Delete ONLY ONE entry of that food for that table
+    order = Orders.objects.filter(table_id=table_id, Foodid_id=food_id).first()
+    if order:
+        order.delete()
+
+    return redirect('order',id=a)
+
 
 def cashier(request):
     return render(request,'Cashierhome.html')
@@ -127,20 +140,28 @@ def Logout(request):
     auth.logout(request)
     return redirect('login')
 
-def order(request):
-    if request.method=='POST':
-        table=request.POST.get('tbid')
-        fd=request.POST.get('fdid')
-        amount=request.POST.get('price')
-        waiterid=request.user
-        tbid=Tables.objects.get(id=table)
-        fdid=Food.objects.get(id=fd)
-        data=Orders.objects.create(table=tbid,Foodid=fdid,waiterid=waiterid,total_amount=amount)
-        data.save()
+def order(request, id):
+    if request.method == 'POST':
+        table = id
+        fd = request.POST.get('fdid')
+        amount = request.POST.get('price')
+
+        waiterid = request.user
+        tbid = Tables.objects.get(id=table)
+        fdid = Food.objects.get(id=fd)
+
+        Orders.objects.create(
+            table=tbid,
+            Foodid=fdid,
+            waiterid=waiterid,
+            total_amount=amount
+        )
+
         return redirect('menu', id=table)
-    else:
-        return redirect('menu', id=table)
-    
+
+    # GET request handling
+    return redirect('menu', id=id)
+
 
 
 
@@ -227,4 +248,140 @@ def bill_table(request, table_number):
         "table": table,
         "orders": ready_orders,
         "total": total
-    })
+    })  
+
+
+def print_bill_pdf(request, table_number):
+    table = get_object_or_404(Tables, number=table_number)
+
+    # Only READY orders
+    orders = Orders.objects.filter(table=table_number, status="ready")
+
+    # Total
+    total_amount = sum(o.total_amount for o in orders)
+
+    # Create PDF response
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="bill_table_{table_number}.pdf"'
+
+    p = canvas.Canvas(response, pagesize=letter)
+    width, height = letter
+
+    y = height - 50
+
+    # Header
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(50, y, f"Restaurant Bill - Table {table_number}")
+
+    y -= 40
+    p.setFont("Helvetica", 12)
+
+    p.drawString(50, y, f"Customer Table: {table_number}")
+    y -= 20
+    p.drawString(50, y, "--------------------------------------------")
+    y -= 30
+
+    # List items
+    for order in orders:
+        line = f"{order.Foodid.foodname}   x{order.quantity}   ₹{order.total_amount}"
+        p.drawString(50, y, line)
+        y -= 20
+
+        if y < 50:
+            p.showPage()
+            y = height - 50
+
+    # Total
+    y -= 20
+    p.drawString(50, y, "--------------------------------------------")
+    y -= 30
+    p.setFont("Helvetica-Bold", 14)
+    p.drawString(50, y, f"TOTAL: ₹{total_amount}")
+
+    # Save PDF
+    p.showPage()
+    p.save()
+
+    return response
+
+
+
+def print_bill_pdf(request, table_number):
+    table = get_object_or_404(Tables, number=table_number)
+
+    # GET only READY orders
+    ready_orders = Orders.objects.filter(table=table_number, status="ready")
+
+    # Grouping for PDF
+    orders = (
+        ready_orders
+        .values('Foodid__foodname', 'Foodid__price')
+        .annotate(quantity=Count('id'))
+    )
+
+    # Calculations
+    subtotal = sum(item['Foodid__price'] * item['quantity'] for item in orders)
+    gst = round(subtotal * 0.05, 2)
+    total = round(subtotal + gst, 2)
+
+    # Get waiter ID from first order
+    waiter_id = None
+    if ready_orders.exists():
+        waiter_id = ready_orders.first().waiterid
+
+    # Context for PDF
+    context = {
+        "table_no": table_number,
+        "orders": orders,
+        "subtotal": subtotal,
+        "gst": gst,
+        "total": total,
+    }
+
+    # Load HTML template
+    template = get_template("bill_template.html")
+    html = template.render(context)
+
+    # Create PDF response
+    response = HttpResponse(content_type="application/pdf")
+    response['Content-Disposition'] = f'attachment; filename="bill_table_{table_number}.pdf"'
+
+    pisa_status = pisa.CreatePDF(html, dest=response)
+
+    if pisa_status.err:
+        return HttpResponse("Error while generating PDF")
+
+    # ======================================================
+    # AFTER PDF SUCCESSFULLY GENERATED → SAVE SALE & DELETE
+    # ======================================================
+
+    # Save sale in Sales table
+    Sales.objects.create(
+        customer_name=f"Table {table_number}",
+        amount=total,
+        waiterid=waiter_id
+    )
+
+    # Delete only ready orders after printing bill
+    ready_orders.delete()
+
+    table.status = "available"
+    table.save()
+
+    return response
+
+
+def confirm_order(request, id):
+    table = Tables.objects.get(id=id)
+
+    # Check if table has orders
+    has_orders = Orders.objects.filter(table=table).exists()
+    if not has_orders:
+        return redirect('menu', id=id)
+
+    # Mark table as occupied
+    table.status = "occupied"
+    table.save()
+
+    # Redirect to tables page
+    return redirect('tables')
